@@ -621,5 +621,10 @@ namespace perpustakaan
         private void label1_Click_1(object sender, EventArgs e)
         {
         }
+
+        private void tglLahir_ValueChanged(object sender, EventArgs e)
+        {
+            tglLahir.CustomFormat = "dd/MM/yyyy";
+        }
     }
 }

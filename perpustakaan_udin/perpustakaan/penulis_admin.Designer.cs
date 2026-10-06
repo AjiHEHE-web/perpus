@@ -223,6 +223,7 @@
             this.tglLahir.Name = "tglLahir";
             this.tglLahir.Size = new System.Drawing.Size(95, 20);
             this.tglLahir.TabIndex = 12;
+            this.tglLahir.ValueChanged += new System.EventHandler(this.tglLahir_ValueChanged);
             // 
             // panel2
             // 
