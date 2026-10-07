@@ -8,7 +8,7 @@ namespace perpustakaan
 {
     internal class koneksi
     {
-        public static string conn = "Data Source = JALALUDDIN\\SQLEXPRESS; Initial Catalog = perpustakaan; Integrated Security = True";
+        public static string conn = "Data Source = LAPTOP-3C93U4H6\\SQLEXPRESS; Initial Catalog = perpustakaan; Integrated Security = True";
     }
 
     public class Model

@@ -125,9 +125,6 @@
     <EmbeddedResource Include="Anggota.resx">
       <DependentUpon>Anggota.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="peminjaman_admin.resx">
-      <DependentUpon>peminjaman_admin.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="penerbit_admin.resx">
       <DependentUpon>penerbit_admin.cs</DependentUpon>
     </EmbeddedResource>
