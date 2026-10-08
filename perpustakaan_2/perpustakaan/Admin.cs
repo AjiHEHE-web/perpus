@@ -193,5 +193,15 @@ namespace perpustakaan
         private void panel2_Paint(object sender, PaintEventArgs e)
         {
         }
+
+        private void pLogo_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pHeader_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
     }
 }
