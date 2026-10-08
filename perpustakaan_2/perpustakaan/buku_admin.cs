@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace perpustakaan
@@ -9,8 +10,12 @@ namespace perpustakaan
     public partial class buku_admin : Form
     {
         SqlCommand command;
+        SqlDataAdapter adapter;
+        DataTable tabel;
         SqlDataReader reader;
-        string idBuku = ""; // Variabel untuk menyimpan ID buku yang sedang dipilih
+        public string id_buku = "";
+
+        private const string NamaKolomPilih = "colPilih";
 
         public buku_admin()
         {
@@ -18,12 +23,77 @@ namespace perpustakaan
 
             label4.Text = Model.name;
 
+            // Klik di mana pun pada baris (termasuk tombol "Pilih") memilih baris
+            dataGridView1.CellClick -= dataGridView1_CellClick;
+            dataGridView1.CellClick += dataGridView1_CellClick;
+
+            dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dataGridView1.MultiSelect = false;
+
             this.Resize += buku_admin_Resize;
 
             AturLayout();
         }
 
-        // ========================== METHOD DATA ==========================
+        // ===================== LOAD COMBOBOX =====================
+
+        public void showNamaPenulis()
+        {
+            IsiCombo(cPenulis, "SELECT penulis_nama FROM penulis", "penulis_nama");
+        }
+
+        public void showNamaKategori()
+        {
+            IsiCombo(cKategori, "SELECT kategori_nama FROM kategori", "kategori_nama");
+        }
+
+        public void showNamaPenerbit()
+        {
+            IsiCombo(cPenerbit, "SELECT penerbit_nama FROM penerbit", "penerbit_nama");
+        }
+
+        public void showNamaRak()
+        {
+            IsiCombo(cRak, "SELECT rak_nama FROM rak", "rak_nama");
+        }
+
+        private void IsiCombo(ComboBox combo, string sql, string kolom)
+        {
+            using (SqlConnection connection = new SqlConnection(koneksi.conn))
+            {
+                try
+                {
+                    connection.Open();
+
+                    command = new SqlCommand(sql, connection);
+                    reader = command.ExecuteReader();
+
+                    combo.Items.Clear();
+
+                    while (reader.Read())
+                    {
+                        combo.Items.Add(reader[kolom].ToString());
+                    }
+
+                    reader.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error at: " + ex.Message);
+                }
+            }
+        }
+
+        // ===================== TAMPIL DATA =====================
+
+        private readonly string sqlSelectBuku =
+            @"SELECT b.buku_id, b.buku_judul, b.buku_isbn, b.buku_thnterbit,
+                     p.penulis_nama, k.kategori_nama, pb.penerbit_nama, r.rak_nama
+              FROM buku b
+              JOIN penulis p ON b.buku_penulis_id = p.penulis_id
+              JOIN kategori k ON b.buku_kategori_id = k.kategori_id
+              JOIN penerbit pb ON b.buku_penerbit_id = pb.penerbit_id
+              JOIN rak r ON b.buku_rak_id = r.rak_id";
 
         public void showData()
         {
@@ -32,377 +102,447 @@ namespace perpustakaan
                 try
                 {
                     connection.Open();
-                    // Menggunakan JOIN agar DataGridView menampilkan nama bukan hanya ID
-                    string sql = @"
-                        SELECT b.buku_id, b.buku_judul, p.penulis_nama, k.kategori_nama, 
-                               pn.penerbit_nama, r.rak_nama, b.buku_isbn, b.buku_thnterbit,
-                               b.buku_penulis_id, b.buku_kategori_id, b.buku_penerbit_id, b.buku_rak_id
-                        FROM buku b
-                        LEFT JOIN penulis p ON b.buku_penulis_id = p.penulis_id
-                        LEFT JOIN kategori k ON b.buku_kategori_id = k.kategori_id
-                        LEFT JOIN penerbit pn ON b.buku_penerbit_id = pn.penerbit_id
-                        LEFT JOIN rak r ON b.buku_rak_id = r.rak_id";
 
-                    command = new SqlCommand(sql, connection);
-                    SqlDataAdapter adapter = new SqlDataAdapter(command);
-                    DataTable dt = new DataTable();
-                    adapter.Fill(dt);
-                    dataGridView1.DataSource = dt;
+                    command = new SqlCommand(sqlSelectBuku, connection);
+                    adapter = new SqlDataAdapter(command);
 
-                    // Menyembunyikan kolom ID agar tidak membingungkan pengguna
-                    if (dataGridView1.Columns.Count > 0)
-                    {
-                        dataGridView1.Columns["buku_penulis_id"].Visible = false;
-                        dataGridView1.Columns["buku_kategori_id"].Visible = false;
-                        dataGridView1.Columns["buku_penerbit_id"].Visible = false;
-                        dataGridView1.Columns["buku_rak_id"].Visible = false;
-                    }
+                    tabel = new DataTable();
+                    adapter.Fill(tabel);
+
+                    HapusKolomPilih();
+                    dataGridView1.DataSource = tabel;
+
+                    AturGrid();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error tampil data: " + ex.Message);
+                    MessageBox.Show("Error at: " + ex.Message);
                 }
             }
         }
 
-        public void insertData()
+        // Hapus kolom tombol sebelum DataSource diganti,
+        // supaya index kolom data (0-7) tidak bergeser
+        private void HapusKolomPilih()
         {
-            if (cPenulis.SelectedIndex == -1 || cKategori.SelectedIndex == -1 ||
-                cPenerbit.SelectedIndex == -1 || cRak.SelectedIndex == -1 ||
-                string.IsNullOrWhiteSpace(tJudul.Text) || string.IsNullOrWhiteSpace(tIsbn.Text) ||
-                string.IsNullOrWhiteSpace(tThnterbit.Text))
-            {
-                MessageBox.Show("Data buku belum lengkap!");
+            if (dataGridView1.Columns.Contains(NamaKolomPilih))
+                dataGridView1.Columns.Remove(NamaKolomPilih);
+        }
+
+        private void AturGrid()
+        {
+            if (dataGridView1.Columns.Count == 0)
                 return;
+
+            dataGridView1.Columns[0].Visible = false;
+            dataGridView1.Columns[1].HeaderText = "Judul";
+            dataGridView1.Columns[2].HeaderText = "ISBN";
+            dataGridView1.Columns[3].HeaderText = "Tahun Terbit";
+            dataGridView1.Columns[4].HeaderText = "Penulis";
+            dataGridView1.Columns[5].HeaderText = "Kategori";
+            dataGridView1.Columns[6].HeaderText = "Penerbit";
+            dataGridView1.Columns[7].HeaderText = "Rak";
+
+            // Cegah edit langsung di dalam sel
+            dataGridView1.ReadOnly = true;
+            dataGridView1.AllowUserToAddRows = false;
+            dataGridView1.AllowUserToDeleteRows = false;
+
+            // Tambahkan kolom tombol "Pilih" di paling kanan
+            if (!dataGridView1.Columns.Contains(NamaKolomPilih))
+            {
+                DataGridViewButtonColumn btnPilih = new DataGridViewButtonColumn();
+                btnPilih.Name = NamaKolomPilih;
+                btnPilih.HeaderText = "Aksi";
+                btnPilih.Text = "Pilih";
+                btnPilih.UseColumnTextForButtonValue = true;
+                btnPilih.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                btnPilih.Width = 70;
+                dataGridView1.Columns.Add(btnPilih);
+            }
+        }
+
+        // ===================== INPUT =====================
+
+        public void clear()
+        {
+            tJudul.Text = "";
+            tIsbn.Text = "";
+            tThnterbit.Text = "";
+
+            cPenulis.SelectedIndex = -1;
+            cKategori.SelectedIndex = -1;
+            cPenerbit.SelectedIndex = -1;
+            cRak.SelectedIndex = -1;
+
+            id_buku = "";
+
+            dataGridView1.ClearSelection();
+        }
+
+        private bool inputValid()
+        {
+            if (string.IsNullOrEmpty(tJudul.Text) ||
+                string.IsNullOrEmpty(tIsbn.Text) ||
+                string.IsNullOrEmpty(tThnterbit.Text) ||
+                cPenulis.SelectedIndex == -1 ||
+                cKategori.SelectedIndex == -1 ||
+                cPenerbit.SelectedIndex == -1 ||
+                cRak.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please fill all data!");
+                return false;
             }
 
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
+            if (tThnterbit.Text.Length != 4 ||
+                !tThnterbit.Text.All(char.IsDigit))
             {
-                try
+                MessageBox.Show("Tahun terbit harus 4 digit angka!");
+                return false;
+            }
+
+            return true;
+        }
+
+        private void isiParameter(SqlCommand cmd)
+        {
+            cmd.Parameters.AddWithValue("@penulis", cPenulis.Text);
+            cmd.Parameters.AddWithValue("@kategori", cKategori.Text);
+            cmd.Parameters.AddWithValue("@penerbit", cPenerbit.Text);
+            cmd.Parameters.AddWithValue("@rak", cRak.Text);
+            // Sesuai tipe kolom: varchar(50), char(16), char(4)
+            cmd.Parameters.Add("@judul", SqlDbType.VarChar, 50).Value = tJudul.Text.Trim();
+            cmd.Parameters.Add("@isbn", SqlDbType.Char, 16).Value = tIsbn.Text.Trim();
+            cmd.Parameters.Add("@tahun", SqlDbType.Char, 4).Value = tThnterbit.Text.Trim();
+        }
+
+        // buku_id adalah varchar(50) (bukan identity), jadi ID dibuat manual: Buku1, Buku2, ...
+        private string buatIdBuku(SqlConnection connection)
+        {
+            string sql =
+                @"SELECT ISNULL(MAX(TRY_CAST(SUBSTRING(buku_id, 5, 50) AS INT)), 0) + 1
+                  FROM buku
+                  WHERE buku_id LIKE 'Buku%'";
+
+            using (SqlCommand cmd = new SqlCommand(sql, connection))
+            {
+                int next = Convert.ToInt32(cmd.ExecuteScalar());
+                return "Buku" + next;
+            }
+        }
+
+        // ===================== CRUD =====================
+
+        public void insertData()
+        {
+            if (!inputValid())
+                return;
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(koneksi.conn))
                 {
                     connection.Open();
-                    string sql = @"
-                        INSERT INTO buku (buku_id, buku_penulis_id, buku_kategori_id, buku_penerbit_id, buku_rak_id, buku_judul, buku_isbn, buku_thnterbit) 
-                        VALUES (@buku_id, @penulis_id, @kategori_id, @penerbit_id, @rak_id, @judul, @isbn, @thnterbit)";
+
+                    string idBaru = buatIdBuku(connection);
+
+                    string sql =
+                        @"INSERT INTO buku
+                        (
+                            buku_id,
+                            buku_penulis_id,
+                            buku_kategori_id,
+                            buku_penerbit_id,
+                            buku_rak_id,
+                            buku_judul,
+                            buku_isbn,
+                            buku_thnterbit
+                        )
+                        VALUES
+                        (
+                            @id,
+                            (SELECT penulis_id FROM penulis WHERE penulis_nama = @penulis),
+                            (SELECT kategori_id FROM kategori WHERE kategori_nama = @kategori),
+                            (SELECT penerbit_id FROM penerbit WHERE penerbit_nama = @penerbit),
+                            (SELECT rak_id FROM rak WHERE rak_nama = @rak),
+                            @judul,
+                            @isbn,
+                            @tahun
+                        )";
 
                     command = new SqlCommand(sql, connection);
-                    // Mengirim string kosong untuk buku_id karena akan dioverride otomatis oleh Trigger yang dibuat
-                    command.Parameters.AddWithValue("@buku_id", "");
-                    command.Parameters.AddWithValue("@penulis_id", cPenulis.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@kategori_id", cKategori.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@penerbit_id", cPenerbit.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@rak_id", cRak.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@judul", tJudul.Text);
-                    command.Parameters.AddWithValue("@isbn", tIsbn.Text);
-                    command.Parameters.AddWithValue("@thnterbit", tThnterbit.Text);
+
+                    command.Parameters.Add("@id", SqlDbType.VarChar, 50).Value = idBaru;
+                    isiParameter(command);
 
                     command.ExecuteNonQuery();
-                    MessageBox.Show("Data buku berhasil ditambahkan!");
-                    BersihkanInput();
-                    showData();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error insert buku: " + ex.Message);
-                }
+
+                MessageBox.Show(
+                    "Successfully inserted!",
+                    "Information",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                clear();
+                showData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error at: " + ex.Message);
             }
         }
 
         public void editData()
         {
-            if (string.IsNullOrEmpty(idBuku))
+            if (string.IsNullOrEmpty(id_buku))
             {
-                MessageBox.Show("Pilih data yang ingin diedit dari tabel terlebih dahulu!");
+                MessageBox.Show(
+                    "Please select the data!",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
                 return;
             }
 
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
+            if (!inputValid())
+                return;
+
+            DialogResult result = MessageBox.Show(
+                "Are you sure to update?",
+                "Confirmation",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result == DialogResult.Yes)
             {
                 try
                 {
-                    connection.Open();
-                    string sql = @"
-                        UPDATE buku SET 
-                            buku_penulis_id = @penulis_id, 
-                            buku_kategori_id = @kategori_id, 
-                            buku_penerbit_id = @penerbit_id, 
-                            buku_rak_id = @rak_id, 
-                            buku_judul = @judul, 
-                            buku_isbn = @isbn, 
-                            buku_thnterbit = @thnterbit 
-                        WHERE buku_id = @id";
+                    using (SqlConnection connection = new SqlConnection(koneksi.conn))
+                    {
+                        string sql =
+                            @"UPDATE buku SET
+                                buku_penulis_id =
+                                    (SELECT penulis_id
+                                     FROM penulis
+                                     WHERE penulis_nama = @penulis),
 
-                    command = new SqlCommand(sql, connection);
-                    command.Parameters.AddWithValue("@id", idBuku);
-                    command.Parameters.AddWithValue("@penulis_id", cPenulis.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@kategori_id", cKategori.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@penerbit_id", cPenerbit.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@rak_id", cRak.SelectedValue.ToString());
-                    command.Parameters.AddWithValue("@judul", tJudul.Text);
-                    command.Parameters.AddWithValue("@isbn", tIsbn.Text);
-                    command.Parameters.AddWithValue("@thnterbit", tThnterbit.Text);
+                                buku_kategori_id =
+                                    (SELECT kategori_id
+                                     FROM kategori
+                                     WHERE kategori_nama = @kategori),
 
-                    command.ExecuteNonQuery();
-                    MessageBox.Show("Data buku berhasil diupdate!");
-                    BersihkanInput();
+                                buku_penerbit_id =
+                                    (SELECT penerbit_id
+                                     FROM penerbit
+                                     WHERE penerbit_nama = @penerbit),
+
+                                buku_rak_id =
+                                    (SELECT rak_id
+                                     FROM rak
+                                     WHERE rak_nama = @rak),
+
+                                buku_judul = @judul,
+                                buku_isbn = @isbn,
+                                buku_thnterbit = @tahun
+
+                              WHERE buku_id = @id_buku";
+
+                        command = new SqlCommand(sql, connection);
+
+                        isiParameter(command);
+
+                        command.Parameters.Add("@id_buku", SqlDbType.VarChar, 50).Value = id_buku;
+
+                        connection.Open();
+                        command.ExecuteNonQuery();
+                    }
+
+                    MessageBox.Show(
+                        "Successfully updated!",
+                        "Information",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+
+                    clear();
                     showData();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error edit buku: " + ex.Message);
+                    MessageBox.Show(ex.Message);
                 }
             }
         }
 
         public void deleteData()
         {
-            if (string.IsNullOrEmpty(idBuku))
+            if (string.IsNullOrEmpty(id_buku))
             {
-                MessageBox.Show("Pilih data yang ingin dihapus dari tabel terlebih dahulu!");
+                MessageBox.Show(
+                    "Please select the data!",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
                 return;
             }
 
-            DialogResult dialog = MessageBox.Show("Apakah Anda yakin ingin menghapus buku ini?", "Konfirmasi", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            DialogResult result = MessageBox.Show(
+                "Are you sure to delete?",
+                "Confirmation",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
 
-            if (dialog == DialogResult.Yes)
+            if (result == DialogResult.Yes)
             {
-                using (SqlConnection connection = new SqlConnection(koneksi.conn))
+                try
                 {
-                    try
+                    using (SqlConnection connection = new SqlConnection(koneksi.conn))
                     {
-                        connection.Open();
-                        string sql = "DELETE FROM buku WHERE buku_id = @id";
-                        command = new SqlCommand(sql, connection);
-                        command.Parameters.AddWithValue("@id", idBuku);
+                        string sql = "DELETE FROM buku WHERE buku_id = @id_buku";
 
+                        command = new SqlCommand(sql, connection);
+
+                        command.Parameters.Add("@id_buku", SqlDbType.VarChar, 50).Value = id_buku;
+
+                        connection.Open();
                         command.ExecuteNonQuery();
-                        MessageBox.Show("Data buku berhasil dihapus!");
-                        BersihkanInput();
-                        showData();
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error hapus buku: " + ex.Message);
-                    }
+
+                    MessageBox.Show(
+                        "Successfully deleted!",
+                        "Information",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+
+                    clear();
+                    showData();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
                 }
             }
         }
 
         public void searchData()
         {
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
+            if (!string.IsNullOrEmpty(cariBuku.Text))
             {
                 try
                 {
-                    connection.Open();
-                    string sql = @"
-                        SELECT b.buku_id, b.buku_judul, p.penulis_nama, k.kategori_nama, 
-                               pn.penerbit_nama, r.rak_nama, b.buku_isbn, b.buku_thnterbit,
-                               b.buku_penulis_id, b.buku_kategori_id, b.buku_penerbit_id, b.buku_rak_id
-                        FROM buku b
-                        LEFT JOIN penulis p ON b.buku_penulis_id = p.penulis_id
-                        LEFT JOIN kategori k ON b.buku_kategori_id = k.kategori_id
-                        LEFT JOIN penerbit pn ON b.buku_penerbit_id = pn.penerbit_id
-                        LEFT JOIN rak r ON b.buku_rak_id = r.rak_id
-                        WHERE b.buku_judul LIKE @cari OR b.buku_isbn LIKE @cari";
+                    using (SqlConnection connection = new SqlConnection(koneksi.conn))
+                    {
+                        string sql =
+                            sqlSelectBuku +
+                            @" WHERE
+                                b.buku_judul LIKE '%' + @search + '%'
+                                OR b.buku_isbn LIKE '%' + @search + '%'
+                                OR p.penulis_nama LIKE '%' + @search + '%'
+                                OR k.kategori_nama LIKE '%' + @search + '%'
+                                OR pb.penerbit_nama LIKE '%' + @search + '%'
+                                OR r.rak_nama LIKE '%' + @search + '%'";
 
-                    command = new SqlCommand(sql, connection);
-                    command.Parameters.AddWithValue("@cari", "%" + cariBuku.Text + "%");
+                        command = new SqlCommand(sql, connection);
 
-                    SqlDataAdapter adapter = new SqlDataAdapter(command);
-                    DataTable dt = new DataTable();
-                    adapter.Fill(dt);
-                    dataGridView1.DataSource = dt;
+                        command.Parameters.AddWithValue("@search", cariBuku.Text);
+
+                        adapter = new SqlDataAdapter(command);
+
+                        tabel = new DataTable();
+                        adapter.Fill(tabel);
+
+                        HapusKolomPilih();
+                        dataGridView1.DataSource = tabel;
+
+                        AturGrid();
+                    }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error cari data: " + ex.Message);
+                    MessageBox.Show("Error at: " + ex.Message);
                 }
             }
-        }
-
-        // ======================= METHOD COMBOBOX & INPUT =======================
-
-        public void showNamaPenulis()
-        {
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
+            else
             {
-                try
-                {
-                    connection.Open();
-                    string sql = "SELECT penulis_id, penulis_nama FROM penulis";
-                    command = new SqlCommand(sql, connection);
-                    reader = command.ExecuteReader();
-                    DataTable dt = new DataTable();
-                    dt.Load(reader);
-                    cPenulis.DataSource = null;
-                    cPenulis.DataSource = dt;
-                    cPenulis.DisplayMember = "penulis_nama";
-                    cPenulis.ValueMember = "penulis_id";
-                    cPenulis.SelectedIndex = -1;
-                }
-                catch { cPenulis.DataSource = null; }
+                showData();
             }
         }
 
-        public void showNamaKategori()
+        // ===================== PILIH BARIS =====================
+
+        private void dataGridView1_CellClick(
+            object sender,
+            DataGridViewCellEventArgs e)
         {
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
+            if (e.RowIndex < 0)
+                return;
+
+            PilihBaris(e.RowIndex);
+        }
+
+        private void PilihBaris(int rowIndex)
+        {
+            DataGridViewRow row = dataGridView1.Rows[rowIndex];
+
+            dataGridView1.ClearSelection();
+            row.Selected = true;
+
+            // Kolom char(16) dan char(4) diberi spasi di belakang oleh SQL Server, jadi di-Trim
+            id_buku = Convert.ToString(row.Cells[0].Value).Trim();
+            tJudul.Text = Convert.ToString(row.Cells[1].Value).Trim();
+            tIsbn.Text = Convert.ToString(row.Cells[2].Value).Trim();
+            tThnterbit.Text = Convert.ToString(row.Cells[3].Value).Trim();
+
+            PilihCombo(cPenulis, Convert.ToString(row.Cells[4].Value));
+            PilihCombo(cKategori, Convert.ToString(row.Cells[5].Value));
+            PilihCombo(cPenerbit, Convert.ToString(row.Cells[6].Value));
+            PilihCombo(cRak, Convert.ToString(row.Cells[7].Value));
+        }
+
+        private void PilihCombo(ComboBox combo, string nilai)
+        {
+            combo.SelectedIndex = -1;
+
+            for (int i = 0; i < combo.Items.Count; i++)
             {
-                try
+                if (combo.Items[i].ToString().Trim() == nilai.Trim())
                 {
-                    connection.Open();
-                    string sql = "SELECT kategori_id, kategori_nama FROM kategori";
-                    command = new SqlCommand(sql, connection);
-                    reader = command.ExecuteReader();
-                    DataTable dt = new DataTable();
-                    dt.Load(reader);
-                    cKategori.DataSource = null;
-                    cKategori.DataSource = dt;
-                    cKategori.DisplayMember = "kategori_nama";
-                    cKategori.ValueMember = "kategori_id";
-                    cKategori.SelectedIndex = -1;
+                    combo.SelectedIndex = i;
+                    break;
                 }
-                catch { cKategori.DataSource = null; }
             }
         }
 
-        public void showNamaPenerbit()
-        {
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
-            {
-                try
-                {
-                    connection.Open();
-                    string sql = "SELECT penerbit_id, penerbit_nama FROM penerbit";
-                    command = new SqlCommand(sql, connection);
-                    reader = command.ExecuteReader();
-                    DataTable dt = new DataTable();
-                    dt.Load(reader);
-                    cPenerbit.DataSource = null;
-                    cPenerbit.DataSource = dt;
-                    cPenerbit.DisplayMember = "penerbit_nama";
-                    cPenerbit.ValueMember = "penerbit_id";
-                    cPenerbit.SelectedIndex = -1;
-                }
-                catch { cPenerbit.DataSource = null; }
-            }
-        }
-
-        public void showNamaRak()
-        {
-            using (SqlConnection connection = new SqlConnection(koneksi.conn))
-            {
-                try
-                {
-                    connection.Open();
-                    string sql = "SELECT rak_id, rak_nama FROM rak";
-                    command = new SqlCommand(sql, connection);
-                    reader = command.ExecuteReader();
-                    DataTable dt = new DataTable();
-                    dt.Load(reader);
-                    cRak.DataSource = null;
-                    cRak.DataSource = dt;
-                    cRak.DisplayMember = "rak_nama";
-                    cRak.ValueMember = "rak_id";
-                    cRak.SelectedIndex = -1;
-                }
-                catch { cRak.DataSource = null; }
-            }
-        }
-
-        private void BersihkanInput()
-        {
-            idBuku = ""; // Kosongkan ID saat clear input
-            cPenulis.SelectedIndex = -1;
-            cKategori.SelectedIndex = -1;
-            cPenerbit.SelectedIndex = -1;
-            cRak.SelectedIndex = -1;
-
-            tJudul.Clear();
-            tIsbn.Clear();
-            tThnterbit.Clear();
-        }
-
-        // ============================ EVENT HANDLER ============================
-
-        private void buku_admin_Load(object sender, EventArgs e)
-        {
-            label4.Text = Model.name;
-
-            AturLayout();
-            showData(); // Panggil Tampil Data
-
-            showNamaPenulis();
-            showNamaKategori();
-            showNamaPenerbit();
-            showNamaRak();
-        }
+        // ===================== LAYOUT =====================
 
         private void buku_admin_Resize(object sender, EventArgs e)
         {
             AturLayout();
         }
 
-        private void bInsert_Click(object sender, EventArgs e)
+        private void AturFontMenu(float ukuran, Padding margin)
         {
-            insertData();
-        }
-
-        // Handle Event tambahan bila kamu tak sengaja klik tombolnya 2x membuat bInsert_Click_1
-        private void bInsert_Click_1(object sender, EventArgs e)
-        {
-            insertData();
-        }
-
-        private void bEdit_Click(object sender, EventArgs e)
-        {
-            editData();
-        }
-
-        private void bDelete_Click(object sender, EventArgs e)
-        {
-            deleteData();
-        }
-
-        private void cariBuku_TextChanged(object sender, EventArgs e)
-        {
-            searchData();
-        }
-
-        // Saat Row pada DataGridView diklik, datanya pindah ke form input
-        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex >= 0)
+            Button[] tombol =
             {
-                DataGridViewRow row = dataGridView1.Rows[e.RowIndex];
+                button1, button2, button3, button4,
+                button5, button6, button7, button8
+            };
 
-                idBuku = row.Cells["buku_id"].Value.ToString();
-                tJudul.Text = row.Cells["buku_judul"].Value.ToString();
-                tIsbn.Text = row.Cells["buku_isbn"].Value.ToString();
-                tThnterbit.Text = row.Cells["buku_thnterbit"].Value.ToString();
-
-                // Select index berdasarkan Value ID
-                cPenulis.SelectedValue = row.Cells["buku_penulis_id"].Value.ToString();
-                cKategori.SelectedValue = row.Cells["buku_kategori_id"].Value.ToString();
-                cPenerbit.SelectedValue = row.Cells["buku_penerbit_id"].Value.ToString();
-                cRak.SelectedValue = row.Cells["buku_rak_id"].Value.ToString();
+            foreach (Button b in tombol)
+            {
+                b.Font = new Font("Microsoft Sans Serif", ukuran, FontStyle.Bold);
+                b.Margin = margin;
             }
         }
-
-        // ============================== NAVIGATION ==============================
-
-        private void button1_Click_1(object sender, EventArgs e) { new Admin().Show(); this.Hide(); }
-        private void button2_Click_1(object sender, EventArgs e) { new penulis_admin().Show(); this.Hide(); }
-        private void button3_Click_1(object sender, EventArgs e) { new penerbit_admin().Show(); this.Hide(); }
-        private void button4_Click_1(object sender, EventArgs e) { new kategori_admin().Show(); this.Hide(); }
-        private void button5_Click_1(object sender, EventArgs e) { new rak_admin().Show(); this.Hide(); }
-        private void button6_Click_1(object sender, EventArgs e) { new buku_admin().Show(); this.Hide(); }
-        private void button7_Click_1(object sender, EventArgs e) { new peminjaman_admin().Show(); this.Hide(); }
-        private void button8_Click_1(object sender, EventArgs e) { this.Close(); }
-
-
-        // =============================== LAYOUT =================================
 
         private void AturLayout()
         {
@@ -416,7 +556,10 @@ namespace perpustakaan
                 pLogo.Size = new Size(83, 77);
 
                 label1.Font = new Font("Arial", 21.75F, FontStyle.Bold);
-                label1.Location = new Point((this.ClientSize.Width - label1.Width) / 2, 22);
+                label1.Location = new Point(
+                    (this.ClientSize.Width - label1.Width) / 2,
+                    22
+                );
 
                 panel1.Width = 220;
                 panel1.Padding = new Padding(25, 23, 25, 23);
@@ -430,29 +573,14 @@ namespace perpustakaan
                 label4.Font = new Font("Calibri", 14.25F, FontStyle.Bold);
                 label4.Location = new Point(label2.Right + 8, 99);
 
-                button1.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button2.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button3.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button4.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button5.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button6.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button7.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-                button8.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-
-                button1.Margin = new Padding(13, 15, 13, 15);
-                button2.Margin = new Padding(13, 15, 13, 15);
-                button3.Margin = new Padding(13, 15, 13, 15);
-                button4.Margin = new Padding(13, 15, 13, 15);
-                button5.Margin = new Padding(13, 15, 13, 15);
-                button6.Margin = new Padding(13, 15, 13, 15);
-                button7.Margin = new Padding(13, 15, 13, 15);
-                button8.Margin = new Padding(13, 15, 13, 15);
+                AturFontMenu(12F, new Padding(13, 15, 13, 15));
 
                 int contentLeft = panel1.Width + 18;
                 int contentRight = this.ClientSize.Width - 18;
                 int contentWidth = contentRight - contentLeft;
 
                 int gap = 16;
+
                 int panel2Width = (int)(contentWidth * 0.36);
                 int panel4Width = contentWidth - panel2Width - gap;
 
@@ -512,54 +640,164 @@ namespace perpustakaan
                 cariBuku.Location = new Point(label8.Right + 8, 363);
 
                 dataGridView1.Location = new Point(contentX, 395);
-                dataGridView1.Size = new Size(contentWidth, this.ClientSize.Height - 415);
+                dataGridView1.Size = new Size(
+                    contentWidth,
+                    this.ClientSize.Height - 415
+                );
             }
             else
             {
                 pHeader.Height = 65;
+
                 pLogo.Location = new Point(10, 5);
                 pLogo.Size = new Size(55, 55);
+
                 label1.Font = new Font("Arial", 18F, FontStyle.Bold);
-                label1.Location = new Point((this.ClientSize.Width - label1.Width) / 2, 18);
+                label1.Location = new Point(
+                    (this.ClientSize.Width - label1.Width) / 2,
+                    18
+                );
+
                 panel1.Width = 130;
                 panel1.Padding = new Padding(10);
+
                 lLine.Location = new Point(130, 65);
                 lLine.Size = new Size(this.ClientSize.Width - 130, 40);
+
                 label2.Font = new Font("Calibri", 10F, FontStyle.Bold);
                 label2.Location = new Point(140, 76);
+
                 label4.Font = new Font("Calibri", 10F, FontStyle.Bold);
                 label4.Location = new Point(label2.Right + 5, 76);
 
-                button1.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button2.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button3.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button4.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button5.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button6.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button7.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-                button8.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
-
-                button1.Margin = new Padding(5, 6, 5, 6);
-                button2.Margin = new Padding(5, 6, 5, 6);
-                button3.Margin = new Padding(5, 6, 5, 6);
-                button4.Margin = new Padding(5, 6, 5, 6);
-                button5.Margin = new Padding(5, 6, 5, 6);
-                button6.Margin = new Padding(5, 6, 5, 6);
-                button7.Margin = new Padding(5, 6, 5, 6);
-                button8.Margin = new Padding(5, 6, 5, 6);
+                AturFontMenu(9F, new Padding(5, 6, 5, 6));
             }
+
             ResumeLayout();
         }
 
-        // ============================= EVENT LAIN (KOSONG) =========================
+        // ===================== LOAD FORM =====================
+
+        private void buku_admin_Load(object sender, EventArgs e)
+        {
+            tJudul.MaxLength = 50;
+            tIsbn.MaxLength = 16;
+            tThnterbit.MaxLength = 4;
+
+            cPenulis.DropDownStyle = ComboBoxStyle.DropDownList;
+            cKategori.DropDownStyle = ComboBoxStyle.DropDownList;
+            cPenerbit.DropDownStyle = ComboBoxStyle.DropDownList;
+            cRak.DropDownStyle = ComboBoxStyle.DropDownList;
+
+            label4.Text = Model.name;
+
+            AturLayout();
+
+            showNamaPenulis();
+            showNamaKategori();
+            showNamaPenerbit();
+            showNamaRak();
+
+            showData();
+        }
+
+        // ===================== NAVIGASI MENU =====================
+
+        private void button1_Click_1(object sender, EventArgs e)
+        {
+            Admin panggil = new Admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button2_Click_1(object sender, EventArgs e)
+        {
+            penulis_admin panggil = new penulis_admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button3_Click_1(object sender, EventArgs e)
+        {
+            penerbit_admin panggil = new penerbit_admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button4_Click_1(object sender, EventArgs e)
+        {
+            kategori_admin panggil = new kategori_admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button5_Click_1(object sender, EventArgs e)
+        {
+            rak_admin panggil = new rak_admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button6_Click_1(object sender, EventArgs e)
+        {
+            buku_admin panggil = new buku_admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button7_Click_1(object sender, EventArgs e)
+        {
+            peminjaman_admin panggil = new peminjaman_admin();
+            panggil.Show();
+            this.Hide();
+        }
+
+        private void button8_Click_1(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        // ===================== EVENT KOSONG (dari Designer) =====================
+
         private void label1_Click(object sender, EventArgs e) { }
+
         private void label4_Click(object sender, EventArgs e) { }
+
         private void panel1_Paint(object sender, PaintEventArgs e) { }
+
         private void label2_Click(object sender, EventArgs e) { }
+
         private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e) { }
+
         private void lLine_Click(object sender, EventArgs e) { }
+
         private void label5_Click(object sender, EventArgs e) { }
+
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e) { }
+
+        private void label8_Click(object sender, EventArgs e) { }
+
+        // ===================== EVENT TOMBOL =====================
+
+        private void cariBuku_TextChanged(object sender, EventArgs e)
+        {
+            searchData();
+        }
+
+        private void bInsert_Click_1(object sender, EventArgs e)
+        {
+            insertData();
+        }
+
+        private void bEdit_Click(object sender, EventArgs e)
+        {
+            editData();
+        }
+
+        private void bDelete_Click(object sender, EventArgs e)
+        {
+            deleteData();
+        }
         private void panel3_Paint(object sender, PaintEventArgs e) { }
     }
 }
