@@ -53,6 +53,12 @@
     <Compile Include="buku_admin.Designer.cs">
       <DependentUpon>buku_admin.cs</DependentUpon>
     </Compile>
+    <Compile Include="cariBuku.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="cariBuku.Designer.cs">
+      <DependentUpon>cariBuku.cs</DependentUpon>
+    </Compile>
     <Compile Include="kategori_admin.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -84,6 +90,12 @@
     <Compile Include="peminjaman_admin.Designer.cs">
       <DependentUpon>peminjaman_admin.cs</DependentUpon>
     </Compile>
+    <Compile Include="peminjaman_agt.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="peminjaman_agt.Designer.cs">
+      <DependentUpon>peminjaman_agt.cs</DependentUpon>
+    </Compile>
     <Compile Include="penerbit_admin.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -110,8 +122,17 @@
     <Compile Include="Register.Designer.cs">
       <DependentUpon>Register.cs</DependentUpon>
     </Compile>
+    <Compile Include="riwayat_agt.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="riwayat_agt.Designer.cs">
+      <DependentUpon>riwayat_agt.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="buku_admin.resx">
       <DependentUpon>buku_admin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="cariBuku.resx">
+      <DependentUpon>cariBuku.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="kategori_admin.resx">
       <DependentUpon>kategori_admin.cs</DependentUpon>
@@ -124,6 +145,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Anggota.resx">
       <DependentUpon>Anggota.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="peminjaman_agt.resx">
+      <DependentUpon>peminjaman_agt.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="penerbit_admin.resx">
       <DependentUpon>penerbit_admin.cs</DependentUpon>
@@ -146,6 +170,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Register.resx">
       <DependentUpon>Register.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="riwayat_agt.resx">
+      <DependentUpon>riwayat_agt.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

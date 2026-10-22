@@ -94,5 +94,12 @@ namespace perpustakaan
         {
             insertData();
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            this.Hide();
+            Login panggil = new Login();
+            panggil.Show();
+        }
     }
 }

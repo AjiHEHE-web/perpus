@@ -916,7 +916,9 @@ namespace perpustakaan
             object sender,
             EventArgs e)
         {
-            this.Close();
+            this.Hide();
+            Login panggil = new Login();
+            panggil.Show();
         }
     }
 }

@@ -754,7 +754,9 @@ namespace perpustakaan
 
         private void button8_Click_1(object sender, EventArgs e)
         {
-            this.Close();
+            this.Hide();
+            Login panggil = new Login();
+            panggil.Show();
         }
 
         // ===================== EVENT KOSONG (dari Designer) =====================
