@@ -33,7 +33,7 @@ namespace perpustakaan
                     connection.Open();
 
                     string sql = "SELECT pd.peminjaman_detail_peminjaman_id, buku.buku_judul, p.peminjaman_tglpinjam, " +
-                        "p.peminjaman_statuskembali, p.peminjaman_note, p.peminjaman_denda " +
+                        "CASE WHEN p.peminjaman_statuskembali = 1 THEN 'Dikembalikan' ELSE 'Dipinjam' END AS status_kembali, p.peminjaman_note, p.peminjaman_denda " +
                         "FROM peminjaman_detail pd " +
                         "JOIN peminjaman p ON p.peminjaman_id = pd.peminjaman_detail_peminjaman_id " +
                         "JOIN buku ON buku.buku_id = pd.peminjaman_detail_buku_id " +
@@ -76,7 +76,7 @@ namespace perpustakaan
                             "p.peminjaman_id LIKE '%' + @search + '%' OR " +
                             "buku.buku_judul LIKE '%' + @search + '%' OR " +
                             "p.peminjaman_tglpinjam LIKE '%' + @search + '%' OR " +
-                            "p.peminjaman_statuskembali LIKE '%' + @search + '%' OR " +
+                            "(CASE WHEN p.peminjaman_statuskembali = 1 THEN 'Dikembalikan' ELSE 'Dipinjam' END) LIKE '%' + @search + '%' OR " +
                             "p.peminjaman_note LIKE '%' + @search + '%' OR " +
                             "p.peminjaman_denda LIKE '%' + @search + '%'" +
                         ") AND p.peminjaman_user_id = @userid";
