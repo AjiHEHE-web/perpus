@@ -22,6 +22,8 @@ namespace perpustakaan
             InitializeComponent();
 
             label4.Text = Model.name;
+            tThnterbit.Value = DateTime.Now.Year;
+            tIsbn.KeyPress += Angka_KeyPress;
 
             // Klik di mana pun pada baris (termasuk tombol "Pilih") memilih baris
             dataGridView1.CellClick -= dataGridView1_CellClick;
@@ -168,7 +170,7 @@ namespace perpustakaan
         {
             tJudul.Text = "";
             tIsbn.Text = "";
-            tThnterbit.Text = "";
+            tThnterbit.Value = DateTime.Now.Year;
 
             cPenulis.SelectedIndex = -1;
             cKategori.SelectedIndex = -1;
@@ -182,9 +184,8 @@ namespace perpustakaan
 
         private bool inputValid()
         {
-            if (string.IsNullOrEmpty(tJudul.Text) ||
-                string.IsNullOrEmpty(tIsbn.Text) ||
-                string.IsNullOrEmpty(tThnterbit.Text) ||
+            if (string.IsNullOrWhiteSpace(tJudul.Text) ||
+                string.IsNullOrWhiteSpace(tIsbn.Text) ||
                 cPenulis.SelectedIndex == -1 ||
                 cKategori.SelectedIndex == -1 ||
                 cPenerbit.SelectedIndex == -1 ||
@@ -194,10 +195,9 @@ namespace perpustakaan
                 return false;
             }
 
-            if (tThnterbit.Text.Length != 4 ||
-                !tThnterbit.Text.All(char.IsDigit))
+            if (!tIsbn.Text.All(char.IsDigit))
             {
-                MessageBox.Show("Tahun terbit harus 4 digit angka!");
+                MessageBox.Show("ISBN hanya boleh berisi angka.");
                 return false;
             }
 
@@ -213,7 +213,8 @@ namespace perpustakaan
             // Sesuai tipe kolom: varchar(50), char(16), char(4)
             cmd.Parameters.Add("@judul", SqlDbType.VarChar, 50).Value = tJudul.Text.Trim();
             cmd.Parameters.Add("@isbn", SqlDbType.Char, 16).Value = tIsbn.Text.Trim();
-            cmd.Parameters.Add("@tahun", SqlDbType.Char, 4).Value = tThnterbit.Text.Trim();
+            cmd.Parameters.Add("@tahun", SqlDbType.Char, 4).Value =
+                ((int)tThnterbit.Value).ToString("D4");
         }
 
         // buku_id adalah varchar(50) (bukan identity), jadi ID dibuat manual: Buku1, Buku2, ...
@@ -404,6 +405,7 @@ namespace perpustakaan
             {
                 try
                 {
+                    int jumlahBaris;
                     using (SqlConnection connection = new SqlConnection(koneksi.conn))
                     {
                         string sql = "DELETE FROM buku WHERE buku_id = @id_buku";
@@ -413,22 +415,20 @@ namespace perpustakaan
                         command.Parameters.Add("@id_buku", SqlDbType.VarChar, 50).Value = id_buku;
 
                         connection.Open();
-                        command.ExecuteNonQuery();
+                        jumlahBaris = command.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show(
-                        "Successfully deleted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
+                    koneksi.TampilkanHasilHapus(jumlahBaris, "buku");
                     clear();
                     showData();
                 }
+                catch (SqlException ex)
+                {
+                    koneksi.TampilkanKesalahanHapus(ex, "buku");
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    MessageBox.Show("Data buku gagal dihapus: " + ex.Message);
                 }
             }
         }
@@ -500,7 +500,9 @@ namespace perpustakaan
             id_buku = Convert.ToString(row.Cells[0].Value).Trim();
             tJudul.Text = Convert.ToString(row.Cells[1].Value).Trim();
             tIsbn.Text = Convert.ToString(row.Cells[2].Value).Trim();
-            tThnterbit.Text = Convert.ToString(row.Cells[3].Value).Trim();
+            tThnterbit.Value = Convert.ToDecimal(
+                Convert.ToInt32(Convert.ToString(row.Cells[3].Value).Trim())
+            );
 
             PilihCombo(cPenulis, Convert.ToString(row.Cells[4].Value));
             PilihCombo(cKategori, Convert.ToString(row.Cells[5].Value));
@@ -682,7 +684,6 @@ namespace perpustakaan
         {
             tJudul.MaxLength = 50;
             tIsbn.MaxLength = 16;
-            tThnterbit.MaxLength = 4;
 
             cPenulis.DropDownStyle = ComboBoxStyle.DropDownList;
             cKategori.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -692,6 +693,12 @@ namespace perpustakaan
             label4.Text = Model.name;
 
             AturLayout();
+        }
+
+        private void Angka_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+                e.Handled = true;
 
             showNamaPenulis();
             showNamaKategori();

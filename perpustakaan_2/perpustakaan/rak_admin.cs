@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace perpustakaan
@@ -19,6 +20,8 @@ namespace perpustakaan
             InitializeComponent();
 
             label4.Text = Model.name;
+
+            rakKapasitas.KeyPress += Angka_KeyPress;
 
             showData();
 
@@ -615,68 +618,71 @@ namespace perpustakaan
         {
             int kapasitas;
 
-            if (!string.IsNullOrEmpty(rakNama.Text) &&
-                !string.IsNullOrEmpty(rakLokasi.Text) &&
-                !string.IsNullOrEmpty(rakKapasitas.Text) &&
-                int.TryParse(rakKapasitas.Text, out kapasitas))
+            if (string.IsNullOrWhiteSpace(rakNama.Text) ||
+                string.IsNullOrWhiteSpace(rakLokasi.Text) ||
+                string.IsNullOrWhiteSpace(rakKapasitas.Text))
             {
-                try
-                {
-                    using (SqlConnection connection =
-                        new SqlConnection(koneksi.conn))
-                    {
-                        string sql =
-                            "INSERT INTO rak " +
-                            "(rak_nama, rak_lokasi, rak_kapasitas) " +
-                            "VALUES " +
-                            "(@nama, @lokasi, @kapasitas)";
-
-                        command = new SqlCommand(
-                            sql,
-                            connection
-                        );
-
-                        command.Parameters.AddWithValue(
-                            "@nama",
-                            rakNama.Text
-                        );
-
-                        command.Parameters.AddWithValue(
-                            "@lokasi",
-                            rakLokasi.Text
-                        );
-
-                        command.Parameters.Add(
-                            "@kapasitas",
-                            SqlDbType.Int
-                        ).Value = kapasitas;
-
-                        connection.Open();
-
-                        command.ExecuteNonQuery();
-                    }
-
-                    MessageBox.Show(
-                        "Successfully inserted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
-                    clear();
-                    showData();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        "Error at: " + ex.Message
-                    );
-                }
+                MessageBox.Show("Please fill all data before insert!");
+                return;
             }
-            else
+
+            if (!int.TryParse(rakKapasitas.Text, out kapasitas) ||
+                !rakKapasitas.Text.All(char.IsDigit))
+            {
+                MessageBox.Show("Kapasitas harus diisi dengan angka.");
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection connection =
+                    new SqlConnection(koneksi.conn))
+                {
+                    string sql =
+                        "INSERT INTO rak " +
+                        "(rak_nama, rak_lokasi, rak_kapasitas) " +
+                        "VALUES " +
+                        "(@nama, @lokasi, @kapasitas)";
+
+                    command = new SqlCommand(
+                        sql,
+                        connection
+                    );
+
+                    command.Parameters.AddWithValue(
+                        "@nama",
+                        rakNama.Text
+                    );
+
+                    command.Parameters.AddWithValue(
+                        "@lokasi",
+                        rakLokasi.Text
+                    );
+
+                    command.Parameters.Add(
+                        "@kapasitas",
+                        SqlDbType.Int
+                    ).Value = kapasitas;
+
+                    connection.Open();
+
+                    command.ExecuteNonQuery();
+                }
+
+                MessageBox.Show(
+                    "Successfully inserted!",
+                    "Information",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                clear();
+                showData();
+            }
+            catch (Exception ex)
             {
                 MessageBox.Show(
-                    "Please fill all data before insert!"
+                    "Error at: " + ex.Message
                 );
             }
         }
@@ -688,89 +694,89 @@ namespace perpustakaan
             if (dataGridView1.CurrentRow != null &&
                 dataGridView1.CurrentRow.Selected)
             {
-                if (!string.IsNullOrEmpty(rakNama.Text) &&
-                    !string.IsNullOrEmpty(rakLokasi.Text) &&
-                    !string.IsNullOrEmpty(rakKapasitas.Text) &&
-                    int.TryParse(
-                        rakKapasitas.Text,
-                        out kapasitas
-                    ))
+                if (string.IsNullOrWhiteSpace(rakNama.Text) ||
+                    string.IsNullOrWhiteSpace(rakLokasi.Text) ||
+                    string.IsNullOrWhiteSpace(rakKapasitas.Text))
                 {
-                    DialogResult result =
+                    MessageBox.Show("Please fill all data!");
+                    return;
+                }
+
+                if (!int.TryParse(rakKapasitas.Text, out kapasitas) ||
+                    !rakKapasitas.Text.All(char.IsDigit))
+                {
+                    MessageBox.Show("Kapasitas harus diisi dengan angka.");
+                    return;
+                }
+
+                DialogResult result =
+                    MessageBox.Show(
+                        "Are you sure to update?",
+                        "Confirmation",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        using (SqlConnection connection =
+                            new SqlConnection(koneksi.conn))
+                        {
+                            string sql =
+                                "UPDATE rak SET " +
+                                "rak_nama = @nama, " +
+                                "rak_lokasi = @lokasi, " +
+                                "rak_kapasitas = @kapasitas " +
+                                "WHERE rak_id = @id_rak";
+
+                            command = new SqlCommand(
+                                sql,
+                                connection
+                            );
+
+                            command.Parameters.AddWithValue(
+                                "@id_rak",
+                                id_rak
+                            );
+
+                            command.Parameters.AddWithValue(
+                                "@nama",
+                                rakNama.Text
+                            );
+
+                            command.Parameters.AddWithValue(
+                                "@lokasi",
+                                rakLokasi.Text
+                            );
+
+                            command.Parameters.Add(
+                                "@kapasitas",
+                                SqlDbType.Int
+                            ).Value = kapasitas;
+
+                            connection.Open();
+
+                            command.ExecuteNonQuery();
+                        }
+
                         MessageBox.Show(
-                            "Are you sure to update?",
-                            "Confirmation",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question
+                            "Successfully updated!",
+                            "Information",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
                         );
 
-                    if (result == DialogResult.Yes)
-                    {
-                        try
-                        {
-                            using (SqlConnection connection =
-                                new SqlConnection(koneksi.conn))
-                            {
-                                string sql =
-                                    "UPDATE rak SET " +
-                                    "rak_nama = @nama, " +
-                                    "rak_lokasi = @lokasi, " +
-                                    "rak_kapasitas = @kapasitas " +
-                                    "WHERE rak_id = @id_rak";
-
-                                command = new SqlCommand(
-                                    sql,
-                                    connection
-                                );
-
-                                command.Parameters.AddWithValue(
-                                    "@id_rak",
-                                    id_rak
-                                );
-
-                                command.Parameters.AddWithValue(
-                                    "@nama",
-                                    rakNama.Text
-                                );
-
-                                command.Parameters.AddWithValue(
-                                    "@lokasi",
-                                    rakLokasi.Text
-                                );
-
-                                command.Parameters.Add(
-                                    "@kapasitas",
-                                    SqlDbType.Int
-                                ).Value = kapasitas;
-
-                                connection.Open();
-
-                                command.ExecuteNonQuery();
-                            }
-
-                            MessageBox.Show(
-                                "Successfully updated!",
-                                "Information",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Information
-                            );
-
-                            clear();
-                            showData();
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(
-                                ex.Message
-                            );
-                        }
+                        clear();
+                        showData();
                     }
-                }
-                else
-                {
-                    MessageBox.Show(
-                        "Please fill all data!"
-                    );
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            ex.Message
+                        );
+                    }
                 }
             }
             else
@@ -811,6 +817,7 @@ namespace perpustakaan
             {
                 try
                 {
+                    int jumlahBaris;
                     using (SqlConnection connection =
                         new SqlConnection(koneksi.conn))
                     {
@@ -830,26 +837,28 @@ namespace perpustakaan
 
                         connection.Open();
 
-                        command.ExecuteNonQuery();
+                        jumlahBaris = command.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show(
-                        "Successfully deleted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
+                    koneksi.TampilkanHasilHapus(jumlahBaris, "rak");
                     clear();
                     showData();
                 }
+                catch (SqlException ex)
+                {
+                    koneksi.TampilkanKesalahanHapus(ex, "rak");
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        ex.Message
-                    );
+                    MessageBox.Show("Data rak gagal dihapus: " + ex.Message);
                 }
             }
+        }
+
+        private void Angka_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+                e.Handled = true;
         }
 
         public void searchData()

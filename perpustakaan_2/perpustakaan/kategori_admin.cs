@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace perpustakaan
@@ -19,6 +20,8 @@ namespace perpustakaan
             InitializeComponent();
 
             label4.Text = Model.name;
+
+            nama.KeyPress += Nama_KeyPress;
 
             showData();
 
@@ -519,7 +522,19 @@ namespace perpustakaan
 
         public void insertData()
         {
-            if (!string.IsNullOrEmpty(nama.Text))
+            if (string.IsNullOrWhiteSpace(nama.Text))
+            {
+                MessageBox.Show("Please fill all data before insert!");
+                return;
+            }
+
+            if (!NamaKategoriValid())
+            {
+                MessageBox.Show("Nama kategori hanya boleh berisi huruf dan spasi.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(nama.Text))
             {
                 try
                 {
@@ -536,7 +551,7 @@ namespace perpustakaan
 
                         command.Parameters.AddWithValue(
                             "@nama",
-                            nama.Text
+                            nama.Text.Trim()
                         );
 
                         connection.Open();
@@ -576,6 +591,12 @@ namespace perpustakaan
             {
                 if (!string.IsNullOrEmpty(nama.Text))
                 {
+                    if (!NamaKategoriValid())
+                    {
+                        MessageBox.Show("Nama kategori hanya boleh berisi huruf dan spasi.");
+                        return;
+                    }
+
                     DialogResult result =
                         MessageBox.Show(
                             "Are you sure to update?",
@@ -609,7 +630,7 @@ namespace perpustakaan
 
                                 command.Parameters.AddWithValue(
                                     "@nama",
-                                    nama.Text
+                                    nama.Text.Trim()
                                 );
 
                                 connection.Open();
@@ -680,6 +701,7 @@ namespace perpustakaan
             {
                 try
                 {
+                    int jumlahBaris;
                     using (SqlConnection connection =
                         new SqlConnection(koneksi.conn))
                     {
@@ -700,25 +722,38 @@ namespace perpustakaan
 
                         connection.Open();
 
-                        command.ExecuteNonQuery();
+                        jumlahBaris = command.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show(
-                        "Successfully deleted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
+                    koneksi.TampilkanHasilHapus(jumlahBaris, "kategori");
                     clear();
                     showData();
                 }
+                catch (SqlException ex)
+                {
+                    koneksi.TampilkanKesalahanHapus(ex, "kategori");
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        ex.Message
-                    );
+                    MessageBox.Show("Data kategori gagal dihapus: " + ex.Message);
                 }
+            }
+        }
+
+        private bool NamaKategoriValid()
+        {
+            return nama.Text.Trim().All(
+                karakter => char.IsLetter(karakter) || char.IsWhiteSpace(karakter)
+            );
+        }
+
+        private void Nama_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) &&
+                !char.IsLetter(e.KeyChar) &&
+                !char.IsWhiteSpace(e.KeyChar))
+            {
+                e.Handled = true;
             }
         }
 

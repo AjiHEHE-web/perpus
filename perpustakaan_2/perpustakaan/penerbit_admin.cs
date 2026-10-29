@@ -2,6 +2,8 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace perpustakaan
@@ -19,6 +21,8 @@ namespace perpustakaan
             InitializeComponent();
 
             label4.Text = Model.name;
+
+            noTelp.KeyPress += Angka_KeyPress;
 
             showData();
 
@@ -314,49 +318,51 @@ namespace perpustakaan
 
         public void insertData()
         {
-            if (!string.IsNullOrEmpty(nama.Text) &&
-                !string.IsNullOrEmpty(alamat.Text) &&
-                !string.IsNullOrEmpty(noTelp.Text) &&
-                !string.IsNullOrEmpty(email.Text))
-            {
-                try
-                {
-                    using (SqlConnection connection = new SqlConnection(koneksi.conn))
-                    {
-                        string sql =
-                            "INSERT INTO penerbit " +
-                            "(penerbit_nama, penerbit_alamat, penerbit_notelp, penerbit_email) " +
-                            "VALUES (@nama, @alamat, @noTelp, @email)";
-
-                        command = new SqlCommand(sql, connection);
-
-                        command.Parameters.AddWithValue("@nama", nama.Text);
-                        command.Parameters.AddWithValue("@alamat", alamat.Text);
-                        command.Parameters.AddWithValue("@noTelp", noTelp.Text);
-                        command.Parameters.AddWithValue("@email", email.Text);
-
-                        connection.Open();
-                        command.ExecuteNonQuery();
-                    }
-
-                    MessageBox.Show(
-                        "Successfully inserted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
-                    clear();
-                    showData();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error at: " + ex.Message);
-                }
-            }
-            else
+            if (string.IsNullOrWhiteSpace(nama.Text) ||
+                string.IsNullOrWhiteSpace(alamat.Text) ||
+                string.IsNullOrWhiteSpace(noTelp.Text) ||
+                string.IsNullOrWhiteSpace(email.Text))
             {
                 MessageBox.Show("Please fill all data before insert!");
+                return;
+            }
+
+            if (!ValidasiKontak())
+                return;
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(koneksi.conn))
+                {
+                    string sql =
+                        "INSERT INTO penerbit " +
+                        "(penerbit_nama, penerbit_alamat, penerbit_notelp, penerbit_email) " +
+                        "VALUES (@nama, @alamat, @noTelp, @email)";
+
+                    command = new SqlCommand(sql, connection);
+
+                    command.Parameters.AddWithValue("@nama", nama.Text.Trim());
+                    command.Parameters.AddWithValue("@alamat", alamat.Text.Trim());
+                    command.Parameters.AddWithValue("@noTelp", noTelp.Text.Trim());
+                    command.Parameters.AddWithValue("@email", email.Text.Trim());
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+
+                MessageBox.Show(
+                    "Successfully inserted!",
+                    "Information",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                clear();
+                showData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error at: " + ex.Message);
             }
         }
 
@@ -370,6 +376,9 @@ namespace perpustakaan
                     !string.IsNullOrEmpty(noTelp.Text) &&
                     !string.IsNullOrEmpty(email.Text))
                 {
+                    if (!ValidasiKontak())
+                        return;
+
                     DialogResult result = MessageBox.Show(
                         "Are you sure to update?",
                         "Confirmation",
@@ -461,6 +470,7 @@ namespace perpustakaan
             {
                 try
                 {
+                    int jumlahBaris;
                     using (SqlConnection connection = new SqlConnection(koneksi.conn))
                     {
                         string sql =
@@ -471,24 +481,45 @@ namespace perpustakaan
                         command.Parameters.AddWithValue("@id_penerbit", id_penerbit);
 
                         connection.Open();
-                        command.ExecuteNonQuery();
+                        jumlahBaris = command.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show(
-                        "Successfully deleted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
+                    koneksi.TampilkanHasilHapus(jumlahBaris, "penerbit");
                     clear();
                     showData();
                 }
+                catch (SqlException ex)
+                {
+                    koneksi.TampilkanKesalahanHapus(ex, "penerbit");
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    MessageBox.Show("Data penerbit gagal dihapus: " + ex.Message);
                 }
             }
+        }
+
+        private bool ValidasiKontak()
+        {
+            if (!noTelp.Text.All(char.IsDigit))
+            {
+                MessageBox.Show("Nomor telepon hanya boleh berisi angka.");
+                return false;
+            }
+
+            if (!Regex.IsMatch(email.Text.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                MessageBox.Show("Email harus memiliki format yang valid, contoh: nama@domain.com.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private void Angka_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+                e.Handled = true;
         }
 
         public void searchData()

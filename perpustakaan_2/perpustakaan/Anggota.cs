@@ -21,6 +21,87 @@ namespace perpustakaan
             InitializeComponent();
 
             label4.Text = Model.name;
+
+            this.Resize += Anggota_Resize;
+            this.WindowState = FormWindowState.Maximized;
+            AturLayout();
+        }
+
+        private void Anggota_Resize(object sender, EventArgs e)
+        {
+            AturLayout();
+        }
+
+        private void AturLayout()
+        {
+            bool maximized = this.WindowState == FormWindowState.Maximized;
+            int headerHeight = maximized ? 87 : 65;
+            int sidebarWidth = maximized ? 220 : 130;
+
+            pHeader.Height = headerHeight;
+            label1.Font = maximized
+                ? new Font("Arial", 21.75F, FontStyle.Bold)
+                : new Font("Arial", 18F, FontStyle.Bold);
+            label1.Location = new Point(
+                Math.Max(0, (pHeader.ClientSize.Width - label1.Width) / 2),
+                Math.Max(0, (headerHeight - label1.Height) / 2)
+            );
+
+            panel1.Width = sidebarWidth;
+            panel1.Padding = maximized
+                ? new Padding(25, 23, 25, 23)
+                : new Padding(10);
+
+            label2.Font = maximized
+                ? new Font("Calibri", 14.25F, FontStyle.Bold)
+                : new Font("Calibri", 10F, FontStyle.Bold);
+            label4.Font = maximized
+                ? new Font("Calibri", 14.25F, FontStyle.Bold)
+                : new Font("Calibri", 10F, FontStyle.Bold);
+
+            int contentLeft = sidebarWidth + (maximized ? 10 : 7);
+            int welcomeTop = headerHeight + (maximized ? 12 : 10);
+            label2.Location = new Point(contentLeft, welcomeTop);
+            label4.Location = new Point(label2.Right + (maximized ? 8 : 5), welcomeTop);
+            label4.AutoSize = false;
+            label4.AutoEllipsis = true;
+            label4.Size = new Size(
+                Math.Max(0, this.ClientSize.Width - label4.Left - 15),
+                label2.Height
+            );
+
+            lLine.Location = new Point(sidebarWidth, label2.Bottom + 9);
+            lLine.Size = new Size(
+                Math.Max(0, this.ClientSize.Width - sidebarWidth),
+                2
+            );
+
+            int horizontalMargin = maximized ? 15 : 10;
+            int verticalMargin = maximized ? 20 : 10;
+            int gap = maximized ? 12 : 7;
+            int availableHeight =
+                panel1.ClientSize.Height - (verticalMargin * 2) - (gap * 3);
+            int buttonHeight = Math.Min(
+                maximized ? 52 : 43,
+                Math.Max(0, availableHeight / 4)
+            );
+            int buttonWidth = Math.Max(
+                0,
+                panel1.ClientSize.Width - (horizontalMargin * 2)
+            );
+            Button[] buttons = { button1, button2, button3, button4 };
+
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                buttons[i].Font = maximized
+                    ? new Font("Microsoft Sans Serif", 12F, FontStyle.Bold)
+                    : new Font("Microsoft Sans Serif", 10F);
+                buttons[i].Location = new Point(
+                    horizontalMargin,
+                    verticalMargin + (i * (buttonHeight + gap))
+                );
+                buttons[i].Size = new Size(buttonWidth, buttonHeight);
+            }
         }
 
         private void label1_Click(object sender, EventArgs e)

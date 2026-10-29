@@ -22,12 +22,165 @@ namespace perpustakaan
         public peminjaman_agt()
         {
             InitializeComponent();
+            label4.Text = Model.name;
+            this.Resize += peminjaman_agt_Resize;
+            this.WindowState = FormWindowState.Maximized;
+            AturLayout();
 
             showIdBuku();
 
             dataGridView1.ColumnCount = 2;
             dataGridView1.Columns[0].Name = "ID Buku";
             dataGridView1.Columns[1].Name = "Judul Buku";
+        }
+
+        private void peminjaman_agt_Resize(object sender, EventArgs e)
+        {
+            AturLayout();
+        }
+
+        private void AturLayout()
+        {
+            bool maximized = this.WindowState == FormWindowState.Maximized;
+            int headerHeight = maximized ? 87 : 65;
+            int sidebarWidth = maximized ? 220 : 130;
+
+            pHeader.Height = headerHeight;
+            label1.Font = maximized
+                ? new Font("Arial", 21.75F, FontStyle.Bold)
+                : new Font("Arial", 18F, FontStyle.Bold);
+            label1.Location = new Point(
+                Math.Max(0, (pHeader.ClientSize.Width - label1.Width) / 2),
+                Math.Max(0, (headerHeight - label1.Height) / 2)
+            );
+
+            panel1.Width = sidebarWidth;
+            panel1.Padding = maximized
+                ? new Padding(25, 23, 25, 23)
+                : new Padding(10);
+
+            label2.Font = maximized
+                ? new Font("Calibri", 14.25F, FontStyle.Bold)
+                : new Font("Calibri", 10F, FontStyle.Bold);
+            label4.Font = maximized
+                ? new Font("Calibri", 14.25F, FontStyle.Bold)
+                : new Font("Calibri", 10F, FontStyle.Bold);
+
+            int contentLeft = sidebarWidth + (maximized ? 10 : 7);
+            int contentRight = this.ClientSize.Width - (maximized ? 15 : 10);
+            int contentWidth = Math.Max(0, contentRight - contentLeft);
+            int welcomeTop = headerHeight + (maximized ? 12 : 10);
+            label2.Location = new Point(contentLeft, welcomeTop);
+            label4.Location = new Point(label2.Right + (maximized ? 8 : 5), welcomeTop);
+            label4.AutoSize = false;
+            label4.AutoEllipsis = true;
+            label4.Size = new Size(
+                Math.Max(0, this.ClientSize.Width - label4.Left - 15),
+                label2.Height
+            );
+
+            lLine.Location = new Point(sidebarWidth, label2.Bottom + 9);
+            lLine.Size = new Size(
+                Math.Max(0, this.ClientSize.Width - sidebarWidth),
+                2
+            );
+
+            int horizontalMargin = maximized ? 15 : 10;
+            int verticalMargin = maximized ? 20 : 10;
+            int navigationGap = maximized ? 12 : 7;
+            int availableHeight =
+                panel1.ClientSize.Height - (verticalMargin * 2) - (navigationGap * 3);
+            int navigationButtonHeight = Math.Min(
+                maximized ? 52 : 43,
+                Math.Max(0, availableHeight / 4)
+            );
+            int navigationButtonWidth = Math.Max(
+                0,
+                panel1.ClientSize.Width - (horizontalMargin * 2)
+            );
+            Button[] navigationButtons = { button1, button2, button3, button4 };
+            for (int i = 0; i < navigationButtons.Length; i++)
+            {
+                navigationButtons[i].Font = maximized
+                    ? new Font("Microsoft Sans Serif", 12F, FontStyle.Bold)
+                    : new Font("Microsoft Sans Serif", 10F);
+                navigationButtons[i].Location = new Point(
+                    horizontalMargin,
+                    verticalMargin + (i * (navigationButtonHeight + navigationGap))
+                );
+                navigationButtons[i].Size = new Size(
+                    navigationButtonWidth,
+                    navigationButtonHeight
+                );
+            }
+
+            label3.Location = new Point(
+                contentLeft + Math.Max(0, (contentWidth - label3.Width) / 2),
+                lLine.Bottom + (maximized ? 18 : 16)
+            );
+
+            int panelGap = 18;
+            int columnWidth = Math.Max(0, (contentWidth - panelGap) / 2);
+            int panelTop = label3.Bottom + (maximized ? 14 : 12);
+            int panelBottom = this.ClientSize.Height - (maximized ? 20 : 12);
+            int actionPanelHeight = maximized ? 64 : 58;
+            int actionPanelTop = panelBottom - actionPanelHeight;
+            int bodyPanelHeight = Math.Max(
+                0,
+                actionPanelTop - (maximized ? 14 : 12) - panelTop
+            );
+            int leftColumn = contentLeft;
+            int rightColumn = contentLeft + columnWidth + panelGap;
+
+            panel2.Location = new Point(leftColumn, panelTop);
+            panel2.Size = new Size(columnWidth, bodyPanelHeight);
+            panel3.Location = new Point(leftColumn, actionPanelTop);
+            panel3.Size = new Size(columnWidth, actionPanelHeight);
+            panel4.Location = new Point(rightColumn, panelTop);
+            panel4.Size = new Size(columnWidth, bodyPanelHeight);
+            panel5.Location = new Point(rightColumn, actionPanelTop);
+            panel5.Size = new Size(columnWidth, actionPanelHeight);
+
+            idbuku.Width = Math.Max(0, panel2.ClientSize.Width - idbuku.Left - 12);
+            label9.AutoSize = false;
+            label10.AutoSize = false;
+            label11.AutoSize = false;
+            label9.AutoEllipsis = true;
+            label10.AutoEllipsis = true;
+            label11.AutoEllipsis = true;
+            label9.Size = new Size(Math.Max(0, panel2.ClientSize.Width - label9.Left - 12), 20);
+            label10.Size = new Size(Math.Max(0, panel2.ClientSize.Width - label10.Left - 12), 20);
+            label11.Size = new Size(Math.Max(0, panel2.ClientSize.Width - label11.Left - 12), 20);
+
+            int actionButtonMargin = 10;
+            int actionButtonGap = 6;
+            int actionButtonWidth = Math.Min(
+                75,
+                Math.Max(0, (panel3.ClientSize.Width - (actionButtonMargin * 2) - (actionButtonGap * 2)) / 3)
+            );
+            Button[] cartButtons = { button5, button7, button6 };
+            for (int i = 0; i < cartButtons.Length; i++)
+            {
+                cartButtons[i].Size = new Size(actionButtonWidth, 28);
+                cartButtons[i].Location = new Point(
+                    actionButtonMargin + (i * (actionButtonWidth + actionButtonGap)),
+                    Math.Max(0, (panel3.ClientSize.Height - cartButtons[i].Height) / 2)
+                );
+            }
+
+            int gridMargin = 12;
+            dataGridView1.Location = new Point(gridMargin, gridMargin);
+            dataGridView1.Size = new Size(
+                Math.Max(0, panel4.ClientSize.Width - (gridMargin * 2)),
+                Math.Max(0, panel4.ClientSize.Height - (gridMargin * 2))
+            );
+
+            int saveButtonWidth = Math.Min(220, Math.Max(0, panel5.ClientSize.Width - 24));
+            button8.Size = new Size(saveButtonWidth, 32);
+            button8.Location = new Point(
+                Math.Max(0, (panel5.ClientSize.Width - button8.Width) / 2),
+                Math.Max(0, (panel5.ClientSize.Height - button8.Height) / 2)
+            );
         }
 
         public void showIdBuku()

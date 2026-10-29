@@ -407,6 +407,7 @@ namespace perpustakaan
                 MessageBox.Show(
                     "Please select the data!",
                     "Error",
+
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );
@@ -425,6 +426,7 @@ namespace perpustakaan
             {
                 try
                 {
+                    int jumlahBaris;
                     using (SqlConnection connection = new SqlConnection(koneksi.conn))
                     {
                         string sql =
@@ -435,22 +437,20 @@ namespace perpustakaan
                         command.Parameters.AddWithValue("@id_penulis", id_penulis);
 
                         connection.Open();
-                        command.ExecuteNonQuery();
+                        jumlahBaris = command.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show(
-                        "Successfully deleted!",
-                        "Information",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
+                    koneksi.TampilkanHasilHapus(jumlahBaris, "penulis");
                     clear();
                     showData();
                 }
+                catch (SqlException ex)
+                {
+                    koneksi.TampilkanKesalahanHapus(ex, "penulis");
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    MessageBox.Show("Data penulis gagal dihapus: " + ex.Message);
                 }
             }
         }
